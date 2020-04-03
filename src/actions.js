@@ -5,6 +5,7 @@ import _ from 'lodash';
 var namespace = null;
 function ns(context) {
   return _.mapValues(context, (obj) => {
+    if (namespace == null) return obj;
     return _.get(obj, namespace);
   })
 }
