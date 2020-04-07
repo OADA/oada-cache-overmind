@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "main": "src/index.js",
   "scripts": {
-    "test": "mocha --require @babel/register test/**/*.test.js"
+    "test": "mocha --require @babel/register test/**/*.test.js",
+    "build": "babel src --out-dir ./ --presets=env"
   },
   "license": "MIT",
   "dependencies": {
@@ -12,7 +13,7 @@
     "@babel/preset-env": "^7.9.0",
     "@babel/preset-stage-3": "^7.8.3",
     "@babel/register": "^7.9.0",
-    "@oada/oada-cache": "^3.1.4",
+    "@oada/oada-cache": "^3.1.5",
     "bluebird": "^3.7.2",
     "lodash": "^4.17.15",
     "url": "^0.11.0",

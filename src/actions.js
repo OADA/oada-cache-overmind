@@ -21,7 +21,6 @@ export default function(_namespace) {
     connect(context, props) {
       const {state, effects} = ns(context);
       const connectionId = (props.connection_id || domainToConnectionId(props.domain))
-      console.log('effects2', effects)
       return effects.connect({
         connection_id: connectionId,
         domain:      props.domain,
@@ -36,11 +35,12 @@ export default function(_namespace) {
         //Clear bookmarks if exist
         if (state[connectionId].bookmarks) state[connectionId].bookmarks = {};
         state.isAuthenticated = true;
-      }).catch( (err) => {
-        //TODO error handle? Return an error. Didn't in the cerebral version.
-        state.error = {err};
+        return {token: response.token, connectionId};
+      }).catch((error) => {
+        state.error = {error: error.message};
         state.isAuthenticated = false;
-      })
+        return {error}
+      });
     },
     handleWatch(context, props) {
       const {state, effects} = ns(context);
@@ -89,7 +89,6 @@ export default function(_namespace) {
           if (request.watch) {
             path = `${request.connection_id || props.connection_id}.watches.${request.path}`;
             _.set(state, path, true);
-            store.set(state`${path}`, true)
           }
           requests[i].complete = true;
           return response;
@@ -117,7 +116,7 @@ export default function(_namespace) {
           tree: request.tree || props.tree,
           connection_id: request.connection_id || props.connection_id,
         }).then((response) => {
-          var path = `${request.connection_id || props.connection_id}.${request.path.split("/").join(".")}`;
+          var path = `${request.connection_id || props.connection_id}${request.path.split("/").join(".")}`;
           var oldState = _.cloneDeep(_.get(state, path));
           var newState = _.merge(oldState, request.data);
           _.set(state, path, newState)
@@ -145,7 +144,7 @@ export default function(_namespace) {
           })
           .then((response) => {
             var id = response.headers.location; //TODO why is this here?
-            var path = `${request.connection_id || props.connection_id}.${request.path.split("/").join(".")}`;
+            var path = `${request.connection_id || props.connection_id}${request.path.split("/").join(".")}`;
             var oldState = _.cloneDeep(_.get(state, path));
             var newState = _.merge(oldState, request.data);
             _.set(state, path, newState)
@@ -160,7 +159,6 @@ export default function(_namespace) {
       const {state, effects, actions} = ns(context);
       if (!props.requests) throw new Error("Missing requests. Please pass requests in as an array of request objects under the requests key");
       var requests = props.requests || [];
-      const connectionId =
       return Promise.map(requests, (request, i) => {
         if (request.complete) return;
         const connectionId = request.connection_id || props.connection_id;
