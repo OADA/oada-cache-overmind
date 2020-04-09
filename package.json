@@ -1,6 +1,7 @@
 {
   "name": "@oada/oada-cache-overmind",
   "version": "0.0.2",
+  "description": "",
   "main": "./index.js",
   "scripts": {
     "test": "mocha --require @babel/register test/**/*.test.js",
