@@ -1,3 +1,1 @@
-# oada-cache-overmind-namespace
-
-- Work-in-progress
+# oada-cache-overmind
