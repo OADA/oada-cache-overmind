@@ -7,7 +7,8 @@
     "test": "mocha --require @babel/register test/**/*.test.js",
     "build": "babel src --out-dir ./",
     "build-watch": "babel --watch ./src --out-dir ./",
-    "prepare": "yarn run build"
+    "prepare": "yarn run build",
+    "install": "yarn run build"
   },
   "author": {
     "name": "Cyrus Bowman"
