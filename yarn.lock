@@ -774,10 +774,10 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
-"@oada/oada-cache@^3.1.5":
-  version "3.1.5"
-  resolved "https://registry.yarnpkg.com/@oada/oada-cache/-/oada-cache-3.1.5.tgz#be052b52268e31d317e07cd7c3c6a862e38416c8"
-  integrity sha512-Brzo+VVdSL5Nx8hu4hKw13hhZnIaGABihQHBC77Imt31XliugZeFi4/dhrHuXOPIwsIhxm4wShBqvUe7/mk8Qw==
+"@oada/oada-cache@^3.1.6":
+  version "3.1.6"
+  resolved "https://registry.yarnpkg.com/@oada/oada-cache/-/oada-cache-3.1.6.tgz#4e8a2d0e92705a2a0924096bf1a3e860d260255a"
+  integrity sha512-S7KPtWxCxHCN3CaRjeDcggdIffpmgJBTX3ogh8Cxp/YZwJnwn5Es6YPp7mRKeyK/bIGdGBcfB/sEeZi83Jp1nQ==
   dependencies:
     "@oada/oada-id-client" "^1.0.1"
     axios "^0.19.2"

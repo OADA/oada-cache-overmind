@@ -44,30 +44,37 @@ export default function(_namespace) {
     },
     handleWatch(context, props) {
       const {state, effects} = ns(context);
-      if (props.response.change.type === 'merge') {
-        var oldState = _.cloneDeep(state.oada[props.connection_id][props.path]); //TODO namespace, error path not exist
+      if (props.response.change.type === 'merge' && !props.response.change.wasDelete) {
+        var oldState = _.cloneDeep(_.get(state, `${props.connection_id}.${props.path}`));
         var newState = _.merge(oldState, props.response.change.body.data);
-        state.oada[props.connection_id][props.path] = newState; //TODO namespace
+        _.set(state, `${props.connection_id}.${props.path}`, newState);
         return {oldState}
-      } else if (props.response.change.type === 'delete') {
-        var nullPath = props.nullPath.split('/').join('.');
-        var oldState = _.cloneDeep(state.oada[props.connection_id][nullPath]); //TODO namespace, error path not exist
-        delete state.oada[props.connection_id][nullPath]
+      } else if (props.response.change.type === 'merge' && props.response.change.wasDelete) {
+        var nullPath = props.nullPath.split('/')
+        nullPath.shift();
+        nullPath.shift();
+        nullPath = nullPath.join('.');
+        const deletePath = `${props.path}.${nullPath}`;
+        var oldState = _.cloneDeep(_.get(state, `${props.connection_id}.${deletePath}`));
+        _.unset(state, `${props.connection_id}.${deletePath}`)
         return {oldState}
+      } else {
+        console.warn('oada-cache-overmind - UNKNOWN CHANGE TYPE:', props);
       }
     },
     get(context, props) {
       const {state, effects, actions} = ns(context);
       if (!props.requests) throw new Error('Missing requests. Please pass requests in as an array of request objects under the requests key')
       var requests = props.requests || [];
-      return Promise.map(requests, (request, i) => {
+      const PromiseMap = (props.concurrent) ? Promise.map : Promise.mapSeries;
+      return PromiseMap(requests, (request, i) => {
         if (request.complete) return
         let _statePath = request.path.replace(/^\//, '').split('/').join('.')
         if (request.watch) {
           let conn = state[(request.connection_id || props.connection_id)];
-          if (!conn) {
+          if (conn) {
             if (conn && conn.watches && conn.watches[request.path]) return
-            request.watch.signals = [actions.handleWatch, ...request.watch.actions];
+            request.watch.actions = [actions.handleWatch, ...request.watch.actions];
             request.watch.payload = request.watch.payload || {};
             request.watch.payload.connection_id = request.connection_id || props.connection_id;
             request.watch.payload.path = _statePath;
@@ -92,10 +99,8 @@ export default function(_namespace) {
           }
           requests[i].complete = true;
           return response;
-        }).catch((err) => {
-          //TODO handle error? Return error. Cerebral version does not.
-          console.log('Error in oada.get', err);
-          return err;
+        }).catch((error) => {
+          return {error, ...error.response}
         })
       }).then((responses) => {
         return {responses, requests}
@@ -105,7 +110,8 @@ export default function(_namespace) {
       const {state, effects, actions} = ns(context);
       if (!props.requests) throw new Error("Missing requests. Please pass requests in as an array of request objects under the requests key");
       var requests = props.requests || [];
-      return Promise.map(requests, (request, i) => {
+      const PromiseMap = (props.concurrent) ? Promise.map : Promise.mapSeries;
+      return PromiseMap(requests, (request, i) => {
         if (request.complete) return;
         return effects.put({
           url: request.url, //props.domain + ((request.path[0] === '/') ? '':'/') + request.path,
@@ -131,7 +137,8 @@ export default function(_namespace) {
       const {state, effects, actions} = ns(context);
       if (!props.requests) throw new Error("Missing requests. Please pass requests in as an array of request objects under the requests key");
       var requests = props.requests || [];
-      return Promise.map(requests, (request, i) => {
+      const PromiseMap = (props.concurrent) ? Promise.map : Promise.mapSeries;
+      return PromiseMap(requests, (request, i) => {
         if (request.complete) return;
         return effects.post({
             url: request.url, //props.domain + ((request.path[0] === '/') ? '':'/') + request.path,
@@ -159,7 +166,8 @@ export default function(_namespace) {
       const {state, effects, actions} = ns(context);
       if (!props.requests) throw new Error("Missing requests. Please pass requests in as an array of request objects under the requests key");
       var requests = props.requests || [];
-      return Promise.map(requests, (request, i) => {
+      const PromiseMap = (props.concurrent) ? Promise.map : Promise.mapSeries;
+      return PromiseMap(requests, (request, i) => {
         if (request.complete) return;
         const connectionId = request.connection_id || props.connection_id;
         let _statePath = request.path.replace(/^\//, "").split("/").join(".");
@@ -196,13 +204,12 @@ export default function(_namespace) {
       return effects.disconnect({connection_id: props.connection_id});
     },
     resetCache(context, props) {
+      //Currently oada-cache resets all of the cache, not just the db for a single connection_id
+      const {effects, state} = ns(context);
+      //Connect if not connected
       return effects.resetCache({
         connection_id: props.connection_id || domainToConnectionId(props.domain)
       });
-    },
-    test(context, props) {
-      const {state} = ns(context);
-      state.cyrus = true
     }
   }
 }

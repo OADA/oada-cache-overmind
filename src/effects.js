@@ -3,9 +3,7 @@ import uuid from 'uuid';
 var connections = {};
 
 const connect = function connect(args) {
-  console.log('connection');
   if (!args.connection_id) throw 'connection_id not supplied'
-  if (args.connection_id && connections[args.connection_id]) console.log('returning a connection');
   if (args.connection_id && connections[args.connection_id]) return Promise.resolve(connections[args.connection_id]);
   return oada.connect(args).then((conn) => {
     conn.cache = {};
@@ -16,7 +14,7 @@ const connect = function connect(args) {
 
 const get = function get(args) {
   if (!args.connection_id) throw 'connection_id not supplied'
-  if (args.watch && args.watch.signals) {
+  if (args.watch && args.watch.actions) {
     let actions = args.watch.actions;
     args.watch.func = (payload) => {
       actions.forEach((action) => {
@@ -52,8 +50,7 @@ const disconnect = function _disconnect(args) {
 }
 
 const resetCache = function resetCache(args) {
-  if (!args.connection_id) throw 'connection_id not supplied'
-  if (!connections[args.connection_id]) return; // reseting a non-existent connection
+  //Currently oada-cache resets all of the cache, not just the db for a single connection_id
   return connections[args.connection_id].resetCache(args);
 }
 

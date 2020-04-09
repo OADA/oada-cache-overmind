@@ -1,3 +1,7 @@
 build
 node_modules
 yarn-error.log
+/actions.js
+/effects.js
+/index.js
+/state.js
