@@ -1,7 +1,6 @@
 import Promise from 'bluebird';
 import url from 'url'
 import _ from 'lodash';
-
 var namespace = null;
 function ns(context) {
   return _.mapValues(context, (obj) => {
@@ -44,19 +43,28 @@ export default function(_namespace) {
     },
     handleWatch(context, props) {
       const {state, effects} = ns(context);
-      if (props.response.change.type === 'merge' && !props.response.change.wasDelete) {
-        var oldState = _.cloneDeep(_.get(state, `${props.connection_id}.${props.path}`));
-        var newState = _.merge(oldState, props.response.change.body.data);
-        _.set(state, `${props.connection_id}.${props.path}`, newState);
-        return {oldState}
-      } else if (props.response.change.type === 'merge' && props.response.change.wasDelete) {
-        var nullPath = props.nullPath.split('/')
+      let nullPath = null;
+      if (props.nullPath) {
+        nullPath = props.nullPath.split('/')
         nullPath.shift();
         nullPath.shift();
         nullPath = nullPath.join('.');
-        const deletePath = `${props.path}.${nullPath}`;
-        var oldState = _.cloneDeep(_.get(state, `${props.connection_id}.${deletePath}`));
-        _.unset(state, `${props.connection_id}.${deletePath}`)
+      }
+      if (props.response.change.type === 'merge') {
+        const currentState = _.get(state, `${props.connection_id}.${props.path}`);
+        const oldState = _.cloneDeep(currentState);
+        _.merge(currentState, props.response.change.body.data);
+        if (props.response.change.wasDelete && nullPath) {
+          const deletePath = `${props.path}.${nullPath}`;
+          _.unset(state, `${props.connection_id}.${deletePath}`)
+        }
+        return {oldState}
+      } else if (props.response.change.type === 'delete') {
+        var oldState = _.cloneDeep(_.get(state, `${props.connection_id}.${props.path}`));
+        if (nullPath) {
+          const deletePath = `${props.path}.${nullPath}`;
+          _.unset(state, `${props.connection_id}.${deletePath}`)
+        }
         return {oldState}
       } else {
         console.warn('oada-cache-overmind - UNKNOWN CHANGE TYPE:', props);
