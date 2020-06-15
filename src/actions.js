@@ -1,7 +1,9 @@
 import Promise from 'bluebird';
 import url from 'url'
 import _ from 'lodash';
+const debug = require('debug')('oada-cache-overmind:actions');
 var namespace = null;
+debug('oada-cache-overmind Running...')
 function ns(context) {
   return _.mapValues(context, (obj) => {
     if (namespace == null) return obj;
@@ -12,6 +14,21 @@ function ns(context) {
 function domainToConnectionId(domainUrl) {
   let domain = url.parse(domainUrl).hostname;
   return domain.replace(/\./g, '_')
+}
+
+function handleDelete(target, toRemove, parentPath) {
+  //Remove any null leaf nodes, set values of any non-null nodes
+  _.forEach(toRemove, (value, key) => {
+    const setPath = parentPath ? `${parentPath}.${key}` : key;
+    if (value == null) {
+      _.unset(target, setPath)
+    } else if (_.isObject(value)) {
+      const newParentPath = parentPath == null ? key : `${parentPath}.${key}`;
+      handleDelete(target, value, newParentPath);
+    } else {
+      _.set(target, setPath, value);
+    }
+  });
 }
 
 export default function(_namespace) {
@@ -43,32 +60,33 @@ export default function(_namespace) {
     },
     handleWatch(context, props) {
       const {state, effects} = ns(context);
-      let nullPath = null;
-      if (props.nullPath) {
-        nullPath = props.nullPath.split('/')
-        nullPath.shift();
-        nullPath.shift();
-        nullPath = nullPath.join('.');
+      debug('handleWatch', props);
+      //Loop through all changes in the response
+      const changes = _.get(props, 'response.change') || [];
+      if (!_.isArray(changes)) {
+        console.warn('oada-cache-overmind: Watch response received from oada server was in a unrecognized format.', props);
+        debug('WARNING: response.change not an array')
+        return;
       }
-      if (props.response.change.type === 'merge') {
-        const currentState = _.get(state, `${props.connection_id}.${props.path}`);
-        const oldState = _.cloneDeep(currentState);
-        _.merge(currentState, props.response.change.body.data);
-        if (props.response.change.wasDelete && nullPath) {
-          const deletePath = `${props.path}.${nullPath}`;
-          _.unset(state, `${props.connection_id}.${deletePath}`)
+      const watchPath = (props.path && props.path.length > 0) ? `${props.connection_id}.${props.path}` : props.connection_id;
+      _.forEach(changes, (change) => {
+        if (change.type == 'merge') {
+          //Get the currentState at the change path
+          const changePath = change.path.split('/').join('.')
+          const currentState = _.get(state, `${watchPath}${changePath}`);
+          //Merge in changes
+          _.merge(currentState, change.body);
+        } else if (change.type == 'delete') {
+          //Get the currentState at the change path
+          const changePath = change.path.split('/').join('.')
+          const currentState = _.get(state, `${watchPath}${changePath}`);
+          //Delete every leaf node in change body that is null, merge in all others (_rev, etc.)
+          handleDelete(currentState, change.body);
+        } else {
+          console.warn('oada-cache-overmind: Unrecognized change type', change.type);
+          debug('WARNING: Unrecognized change type', change.type)
         }
-        return {oldState}
-      } else if (props.response.change.type === 'delete') {
-        var oldState = _.cloneDeep(_.get(state, `${props.connection_id}.${props.path}`));
-        if (nullPath) {
-          const deletePath = `${props.path}.${nullPath}`;
-          _.unset(state, `${props.connection_id}.${deletePath}`)
-        }
-        return {oldState}
-      } else {
-        console.warn('oada-cache-overmind - UNKNOWN CHANGE TYPE:', props);
-      }
+      })
     },
     get(context, props) {
       const {state, effects, actions} = ns(context);
