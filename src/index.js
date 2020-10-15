@@ -6,6 +6,7 @@ export default function (namespace) {
   return {
     state,
     effects,
-    actions: actions(namespace)
+    actions: actions.actions(namespace),
+    onInitialize: actions.onInitialize,
   }
 }

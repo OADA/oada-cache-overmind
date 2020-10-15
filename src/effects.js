@@ -1,22 +1,35 @@
-import oada from '@oada/oada-cache';
+//import oada from '@oada/oada-cache';
+import _TOKEN from './token'
+let oada = require('@oada/client');
 import uuid from 'uuid';
 var connections = {};
 
-const connect = function connect(args) {
+const getConnection = function getConnection(connection_id) {
+  return connections[connection_id];
+}
+
+const connect = async function connect(args) {
   if (!args.connection_id) throw 'connection_id not supplied'
   if (args.connection_id && connections[args.connection_id]) return Promise.resolve(connections[args.connection_id]);
+  let _token = new _TOKEN(args);
+  args.token = await _token.get();
+
   return oada.connect(args).then((conn) => {
-    conn.cache = {};
     connections[args.connection_id] = conn;
     return conn;
   })
+}
+
+const head = function head(args) {
+  if (!args.connection_id) throw 'connection_id not supplied'
+  return connections[args.connection_id].head(args);
 }
 
 const get = function get(args) {
   if (!args.connection_id) throw 'connection_id not supplied'
   if (args.watch && args.watch.actions) {
     let actions = args.watch.actions;
-    args.watch.func = (payload) => {
+    args.watchCallback = (payload) => {
       actions.forEach((action) => {
         action(payload)
       })
@@ -59,7 +72,9 @@ export default {
   get,
   put,
   post,
+  head,
   delete: _delete,
   resetCache,
-  disconnect
+  disconnect,
+  getConnection,
 };
