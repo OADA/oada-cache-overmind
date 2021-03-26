@@ -70,8 +70,6 @@ module.exports = {
       },
       handleWatch(context, props) {
         const {state, effects} = ns(context);
-        debug('handleWatch', props);
-        console.log('HAndleWatch', props);
         //Loop through all changes in the response
         /*
         No need for this as long as oada effects are now @oada/client rather than oada-cache
@@ -84,16 +82,22 @@ module.exports = {
         const watchPath = (props.path && props.path.length > 0) ? `${props.connection_id}.${props.path}` : props.connection_id;
         _.forEach(changes, (change) => {
         */
+          let connection_id = props.connection_id || state.defaultConn;
+          let watchPath = props.payload.watchPath || '';
+          watchPath = watchPath ? `.${watchPath}` : watchPath;
+          let path = props.path.replace(/^\//, '');
+          path = props.path.split('/').join('.');
+          const currentState = _.get(state, `${connection_id}.${props.path.split('/').join('.')}`)
           if (props.type == 'merge') {
             //Get the currentState at the change path
-            const changePath = props.body.path.split('/').join('.')
-            const currentState = _.get(state, `${props.watchPath}${changePath}`);
+//            const changePath = props.path.split('/').join('.')
+ //           const currentState = _.get(state, `${props.watchPath}${changePath}`);
             //Merge in changes
             _.merge(currentState, props.body);
           } else if (props.type == 'delete') {
             //Get the currentState at the change path
-            const changePath = props.path.split('/').join('.')
-            const currentState = _.get(state, `${props.watchPath}${changePath}`);
+         //   const changePath = props.path.split('/').join('.')
+         //   const currentState = _.get(state, `${connection_id}.${changePath}`);
             //Delete every leaf node in change body that is null, merge in all others (_rev, etc.)
             let parentPath = props.watchPath.replace(/^\//, '').split('/').join('.');
             handleDelete(currentState, props.body, parentPath);
@@ -111,17 +115,17 @@ module.exports = {
         return PromiseMap(requests, (request, i) => {
           if (request.complete) return
           let _statePath = request.path.replace(/^\//, '').split('/').join('.')
+          let connection_id = request.connection_id || props.connection_id || state.defaultConn;
           if (request.watch) {
-            let conn = state[(request.connection_id || props.connection_id)];
+            let conn = state[connection_id];
             if (conn) {
               if (conn && conn.watches && conn.watches[request.path]) return
               request.watch.actions = [actions.handleWatch, ...(request.watch.actions || [])];
               request.watch.payload = request.watch.payload || {};
-              request.watch.payload.connection_id = request.connection_id || props.connection_id;
-              request.watch.payload.path = _statePath;
+              request.watch.payload.connection_id = connection_id;
+              request.watch.payload.watchPath = _statePath;
             }
           }
-          let connection_id = request.connection_id || props.connection_id || state.defaultConn;
           return effects.get({
             connection_id,
             url: request.url,
@@ -136,7 +140,7 @@ module.exports = {
             //Set response
             if (_responseData) _.set(state, path, _responseData);
             if (request.watch) {
-              path = `${request.connection_id || props.connection_id}.watches.${request.path}`;
+              path = `${connection_id}.watches.${request.path}`;
               _.set(state, path, true);
             }
             requests[i].complete = true;

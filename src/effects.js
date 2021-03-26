@@ -31,6 +31,7 @@ const get = function get(args) {
     let actions = args.watch.actions;
     args.watchCallback = (payload) => {
       actions.forEach((action) => {
+        payload.payload = args.watch.payload;
         action(payload)
       })
     }
