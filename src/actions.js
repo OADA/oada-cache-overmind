@@ -84,10 +84,13 @@ module.exports = {
         */
           let connection_id = props.connection_id || state.defaultConn;
           let watchPath = props.payload.watchPath || '';
+          watchPath = watchPath.replace(/\/$/, '')
+          watchPath = watchPath.replace(/^\//, '')
           watchPath = watchPath ? `.${watchPath}` : watchPath;
           let path = props.path.replace(/^\//, '');
+          path = path.replace(/\/$/, '');
           path = props.path.split('/').join('.');
-          const currentState = _.get(state, `${connection_id}.${props.path.split('/').join('.')}`)
+          const currentState = _.get(state, `${connection_id}${watchPath}${path}`)
           if (props.type == 'merge') {
             //Get the currentState at the change path
 //            const changePath = props.path.split('/').join('.')
