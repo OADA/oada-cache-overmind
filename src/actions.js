@@ -45,23 +45,23 @@ module.exports = {
     return {
       connect(context, props) {
         const {state, effects} = ns(context);
-        const connectionId = (props.connection_id || urlToConnectionId(props.domain))
+        const connection_id = (props.connection_id || urlToConnectionId(props.domain))
         return effects.connect({
-          connection_id: connectionId,
+          connection_id,
           domain:      props.domain,
           options:     props.options,
           cache:       props.cache,
           token:       props.token,
           websocket: props.websocket,
         }).then( (response) => {
-          if (!state.defaultConn) state.defaultConn = connectionId;
-          if (state[connectionId] == null) state[connectionId] = {};
-          state[connectionId].token = response._token;
-          state[connectionId].domain = props.domain;
+          if (!state.defaultConn) state.defaultConn = connection_id;
+          if (state[connection_id] == null) state[connection_id] = {};
+          state[connection_id].token = response._token;
+          state[connection_id].domain = props.domain;
           //Clear bookmarks if exist
-          if (state[connectionId].bookmarks) state[connectionId].bookmarks = {};
+          if (state[connection_id].bookmarks) state[connection_id].bookmarks = {};
           state.isAuthenticated = true;
-          return {token: response.token, connectionId};
+          return {token: response.token, connection_id};
         }).catch((error) => {
           state.error = {error: error.message};
           state.isAuthenticated = false;
@@ -93,19 +93,13 @@ module.exports = {
           const currentState = _.get(state, `${connection_id}${watchPath}${path}`)
           if (props.type == 'merge') {
             //Get the currentState at the change path
-//            const changePath = props.path.split('/').join('.')
- //           const currentState = _.get(state, `${props.watchPath}${changePath}`);
             //Merge in changes
             _.merge(currentState, props.body);
           } else if (props.type == 'delete') {
-            //Get the currentState at the change path
-         //   const changePath = props.path.split('/').join('.')
-         //   const currentState = _.get(state, `${connection_id}.${changePath}`);
             //Delete every leaf node in change body that is null, merge in all others (_rev, etc.)
             let parentPath = props.watchPath.replace(/^\//, '').split('/').join('.');
             handleDelete(currentState, props.body, parentPath);
           } else {
-            console.warn('oada-cache-overmind: Unrecognized change type', props.type);
             debug('WARNING: Unrecognized change type', props.type)
           }
 //        })
@@ -132,7 +126,7 @@ module.exports = {
           return effects.get({
             connection_id,
             url: request.url,
-            path: request.path,
+            path: request.path || request,
             headers: request.headers,
             watch: request.watch,
             tree: request.tree || props.tree,
@@ -163,19 +157,20 @@ module.exports = {
         return PromiseMap(requests, (request, i) => {
           if (request.complete) return
           let _statePath = request.path.replace(/^\//, '').split('/').join('.')
+          let connection_id = request.connection_id || props.connection_id || state.defaultConn;
           return effects.head({
-            connection_id: request.connection_id || props.connection_id || state.defaultConn,
+            connection_id,
             url: request.url,
             path: request.path,
             headers: request.headers,
           }).then((response) => {
             let _responseData = response.data;
             //Build out path one object at a time.
-            var path = `${request.connection_id || props.connection_id}.${_statePath}`;
+            var path = `${connection_id}.${_statePath}`;
             //Set response
             if (_responseData) _.set(state, path, _responseData);
             if (request.watch) {
-              path = `${request.connection_id || props.connection_id}.watches.${request.path}`;
+              path = `${connection_id}.watches.${request.path}`;
               _.set(state, path, true);
             }
             requests[i].complete = true;
@@ -194,6 +189,7 @@ module.exports = {
         const PromiseMap = (props.concurrent) ? Promise.map : Promise.mapSeries;
         return PromiseMap(requests, (request, i) => {
           if (request.complete) return;
+          let connection_id = request.connection_id || props.connection_id || state.defaultConn;
           return effects.put({
             url: request.url, //props.domain + ((request.path[0] === '/') ? '':'/') + request.path,
             path: request.path,
@@ -201,7 +197,7 @@ module.exports = {
             type: request.type,
             headers: request.headers,
             tree: request.tree || props.tree,
-            connection_id: request.connection_id || props.connection_id || state.defaultConn,
+            connection_id,
           }).then((response) => {
             /*
             var path = `${request.connection_id || props.connection_id}${request.path.split("/").join(".")}`;
@@ -224,6 +220,7 @@ module.exports = {
         const PromiseMap = (props.concurrent) ? Promise.map : Promise.mapSeries;
         return PromiseMap(requests, (request, i) => {
           if (request.complete) return;
+          let connection_id =  request.connection_id || props.connection_id || state.defaultConn;
           return effects.post({
               url: request.url, //props.domain + ((request.path[0] === '/') ? '':'/') + request.path,
               path: request.path,
@@ -231,7 +228,7 @@ module.exports = {
               type: request.type,
               headers: request.headers,
               tree: request.tree || props.tree,
-              connection_id: request.connection_id || props.connection_id || state.defaultConn,
+              connection_id,
             })
             .then((response) => {
               /*
@@ -255,15 +252,15 @@ module.exports = {
         const PromiseMap = (props.concurrent) ? Promise.map : Promise.mapSeries;
         return PromiseMap(requests, (request, i) => {
           if (request.complete) return;
-          const connectionId = request.connection_id || props.connection_id;
+          const connection_id = request.connection_id || props.connection_id || state.defaultConn;
           let _statePath = request.path.replace(/^\//, "").split("/").join(".");
-          let conn = _.get(state, connectionId);
+          let conn = _.get(state, connection_id);
           if (request.unwatch && conn && conn.watches) {
             // Don't send the unwatch request if it isn't being watched already.
             if (!conn.watches[request.path]) return;
           }
           return effects.delete({
-              connection_id: request.connection_id || props.connection_id || state.defaultConn,
+              connection_id,
               url: request.url,
               path: request.path,
               headers: request.headers,
@@ -274,10 +271,10 @@ module.exports = {
           .then((response) => {
             //Handle watches index and optimistically update
             if (request.unwatch && conn && conn.watches) {
-              _.unset(state,`${connectionId}.watches.${request.path}`);
+              _.unset(state,`${connection_id}.watches.${request.path}`);
             } /*else {
               
-              _.unset(state,`${connectionId}.${_statePath}`);
+              _.unset(state,`${connection_id}.${_statePath}`);
             }*/
             requests[i].complete = true;
             return response;
@@ -288,19 +285,19 @@ module.exports = {
       },
       disconnect(context, props) {
         const {state, effects} = ns(context);
-        return effects.disconnect({connection_id: props.connection_id});
+        const connection_id = request.connection_id || props.connection_id || state.defaultConn;
+        return effects.disconnect({ connection_id });
       },
       resetCache(context, props) {
         //Currently oada-cache resets all of the cache, not just the db for a single connection_id
         const {effects, state} = ns(context);
-        //Connect if not connected
-        return effects.resetCache({
-          connection_id: props.connection_id || urlToConnectionId(props.domain)
-        });
+        const connection_id = request.connection_id || props.connection_id || state.defaultConn;
+        return effects.resetCache({ connection_id });
       },
       ensurePath(context, props) {
         const {state, actions, effects} = ns(context);
-        let {connection_id, ensure, path, tree, watch } = props;
+        let { ensure, path, tree, watch } = props;
+        const connection_id = request.connection_id || props.connection_id || state.defaultConn;
         return effects.head({
           path,
           tree,
@@ -315,7 +312,8 @@ module.exports = {
         })
       },
       async sync(context, props) {
-        let {connection_id, ensure, path, tree } = props;
+        let { ensure, path, tree } = props;
+        const connection_id = request.connection_id || props.connection_id || state.defaultConn;
         const {state, actions, effects} = ns(context);
         let requests = [{
           connection_id,
@@ -382,8 +380,6 @@ module.exports = {
         }
       })
     }
-
-
     overmind.addMutationListener(handleSyncs)
 
   },
