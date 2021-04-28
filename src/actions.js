@@ -97,7 +97,7 @@ module.exports = {
             _.merge(currentState, props.body);
           } else if (props.type == 'delete') {
             //Delete every leaf node in change body that is null, merge in all others (_rev, etc.)
-            let parentPath = props.watchPath.replace(/^\//, '').split('/').join('.');
+            let parentPath = watchPath.replace(/^\//, '').split('/').join('.');
             handleDelete(currentState, props.body, parentPath);
           } else {
             debug('WARNING: Unrecognized change type', props.type)
@@ -239,7 +239,7 @@ module.exports = {
               _.set(state, path, newState)
               */
               requests[i].complete = true;
-              return;
+              return response;
             });
         }).then((responses) => {
           return hasRequests ? {responses, requests} : responses[0];
