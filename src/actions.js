@@ -285,8 +285,11 @@ module.exports = {
       },
       disconnect(context, props) {
         const {state, effects} = ns(context);
-        const connection_id = request.connection_id || props.connection_id || state.defaultConn;
-        return effects.disconnect({ connection_id });
+        var requests = props.requests || [props];
+        return Promise.mapSeries(requests, (request, i) => {
+          const connection_id = request.connection_id || props.connection_id || state.defaultConn;
+          return effects.disconnect({ connection_id });
+        })
       },
       resetCache(context, props) {
         //Currently oada-cache resets all of the cache, not just the db for a single connection_id
