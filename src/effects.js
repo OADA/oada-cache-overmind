@@ -1,4 +1,3 @@
-//import oada from '@oada/oada-cache';
 import _TOKEN from './token'
 let oada = require('@oada/client');
 import uuid from 'uuid';

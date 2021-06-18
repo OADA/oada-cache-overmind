@@ -30,9 +30,9 @@ const _ = require("lodash");
 //const debug = require("debug")("oada-cache:token");
 const crypto = require("crypto");
 const oadaIdClient = require("@oada/oada-id-client");
-const error = require('debug')('oada-cache:token:error');
-const info = require('debug')('oada-cache:token:info');
-const trace = require('debug')('oada-cache:token:trace');
+const error = require('debug')('oada-cache-overmind:token:error');
+const info = require('debug')('oada-cache-overmind:token:info');
+const trace = require('debug')('oada-cache-overmind:token:trace');
 
 class Token {
   constructor(param = {}) {
