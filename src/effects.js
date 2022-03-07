@@ -14,6 +14,7 @@ const connect = async function connect(args) {
   args.token = await _token.get();
 
   return oada.connect(args).then((conn) => {
+    console.log('CONNECTED', conn);
     connections[args.connection_id] = conn;
     return conn;
   })

@@ -43,11 +43,11 @@ var crypto = require("crypto");
 
 var oadaIdClient = require("@oada/oada-id-client");
 
-var error = require('debug')('oada-cache:token:error');
+var error = require('debug')('oada-cache-overmind:token:error');
 
-var info = require('debug')('oada-cache:token:info');
+var info = require('debug')('oada-cache-overmind:token:info');
 
-var trace = require('debug')('oada-cache:token:trace');
+var trace = require('debug')('oada-cache-overmind:token:trace');
 
 class Token {
   constructor() {
@@ -129,8 +129,6 @@ class Token {
             result = yield oadaIdClient.node(urlObj.host, _this2._options);
           } else {
             // the library itself detects a browser environment and delivers .browser
-            console.log('going in', _this2._options);
-
             var gat = _Promise.promisify(oadaIdClient.getAccessToken);
 
             result = yield gat(urlObj.host, _this2._options);

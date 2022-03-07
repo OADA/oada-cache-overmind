@@ -102,7 +102,6 @@ class Token {
           result = await oadaIdClient.node(urlObj.host, this._options);
         } else {
           // the library itself detects a browser environment and delivers .browser
-          console.log('going in', this._options)
           var gat = Promise.promisify(oadaIdClient.getAccessToken);
           result = await gat(urlObj.host, this._options);
         }
