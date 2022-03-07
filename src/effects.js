@@ -8,10 +8,12 @@ const getConnection = function getConnection(connection_id) {
 }
 
 const connect = async function connect(args) {
+  console.log('args', args);
   if (!args.connection_id) throw 'connection_id not supplied'
   if (args.connection_id && connections[args.connection_id]) return Promise.resolve(connections[args.connection_id]);
   let _token = new _TOKEN(args);
   args.token = await _token.get();
+  console.log('args 2', args);
 
   return oada.connect(args).then((conn) => {
     console.log('CONNECTED', conn);
